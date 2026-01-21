@@ -7,7 +7,6 @@ import {
   View,
   Pressable,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 
@@ -17,6 +16,7 @@ import RecipeCard from "../components/RecipeCard";
 import { RecipeType } from "../types/recipe";
 import { useRecipes } from "../store/useRecipes";
 import ToastMessage from "../components/ToastMessage";
+import BottomSheetModal from "../components/BottomSheetModal";
 
 type Props = NativeStackScreenProps<RootStackParamList, "RecipeList">;
 
@@ -33,6 +33,13 @@ export default function RecipeListScreen({ navigation, route }: Props) {
     });
     return map;
   }, [recipeTypes]);
+
+  const selectedTypeLabel = useMemo(() => {
+    if (!selectedTypeKey) return "All Types";
+    return typeLabelMap[selectedTypeKey] ?? selectedTypeKey;
+  }, [selectedTypeKey, typeLabelMap]);
+
+  const [showTypeModal, setShowTypeModal] = useState(false);
 
   const [toast, setToast] = useState<{
     type?: "success" | "error" | "info";
@@ -67,17 +74,13 @@ export default function RecipeListScreen({ navigation, route }: Props) {
       <View style={styles.filterBox}>
         <Text style={styles.filterLabel}>Recipe Type</Text>
 
-        <View style={styles.pickerWrapper}>
-          <Picker
-            selectedValue={selectedTypeKey}
-            onValueChange={(v) => setSelectedTypeKey(v)}
-          >
-            <Picker.Item label="All Types" value="" />
-            {recipeTypes.map((t) => (
-              <Picker.Item key={t.id} label={t.label} value={t.key} />
-            ))}
-          </Picker>
-        </View>
+        <Pressable
+          style={styles.selectBox}
+          onPress={() => setShowTypeModal(true)}
+        >
+          <Text style={styles.selectText}>{selectedTypeLabel}</Text>
+          <Text style={styles.selectArrow}>▼</Text>
+        </Pressable>
       </View>
 
       {isLoading ? (
@@ -106,8 +109,48 @@ export default function RecipeListScreen({ navigation, route }: Props) {
               }
             />
           )}
+          showsVerticalScrollIndicator={false}
         />
       )}
+
+      <BottomSheetModal
+        visible={showTypeModal}
+        title="Filter by Recipe Type"
+        onClose={() => setShowTypeModal(false)}
+      >
+        <Pressable
+          style={[styles.typeItem, !selectedTypeKey && styles.typeItemActive]}
+          onPress={() => {
+            setSelectedTypeKey("");
+            setShowTypeModal(false);
+          }}
+        >
+          <Text
+            style={[styles.typeText, !selectedTypeKey && styles.typeTextActive]}
+          >
+            All Types
+          </Text>
+        </Pressable>
+
+        {recipeTypes.map((t) => {
+          const active = t.key === selectedTypeKey;
+
+          return (
+            <Pressable
+              key={t.id}
+              style={[styles.typeItem, active && styles.typeItemActive]}
+              onPress={() => {
+                setSelectedTypeKey(t.key);
+                setShowTypeModal(false);
+              }}
+            >
+              <Text style={[styles.typeText, active && styles.typeTextActive]}>
+                {t.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </BottomSheetModal>
 
       <ToastMessage
         visible={!!toast}
@@ -132,12 +175,27 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontWeight: "600",
   },
-  pickerWrapper: {
+
+  // ✅ bottom-sheet select trigger
+  selectBox: {
     borderWidth: 1,
     borderColor: "#e6e6e6",
     borderRadius: 12,
     backgroundColor: "#fff",
-    overflow: "hidden",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  selectText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111",
+  },
+  selectArrow: {
+    fontSize: 12,
+    color: "#666",
   },
 
   listContent: {
@@ -175,5 +233,24 @@ const styles = StyleSheet.create({
   headerBtnText: {
     color: "#fff",
     fontWeight: "700",
+  },
+
+  // ✅ BottomSheet items
+  typeItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: "#f7f7f7",
+    marginBottom: 10,
+  },
+  typeItemActive: {
+    backgroundColor: "#111",
+  },
+  typeText: {
+    fontWeight: "800",
+    color: "#111",
+  },
+  typeTextActive: {
+    color: "#fff",
   },
 });

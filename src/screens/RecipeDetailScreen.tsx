@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import {
-  Alert,
   Image,
   InteractionManager,
   Pressable,
@@ -10,15 +9,16 @@ import {
   View,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { Picker } from "@react-native-picker/picker";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+
 import { RootStackParamList } from "../navigation/RootNavigator";
 import recipeTypesData from "../assets/data/recipetypes.json";
 import { RecipeType } from "../types/recipe";
 import { useRecipes } from "../store/useRecipes";
 import { recipeImages, RecipeImageKey } from "../assets/recipeImages";
 import ActionModal from "../components/ActionModal";
+import BottomSheetModal from "../components/BottomSheetModal";
 import { useLoading } from "../store/useLoading";
 import { useToast } from "../store/useToast";
 
@@ -59,6 +59,16 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
 
   const [editMode, setEditMode] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showTypeModal, setShowTypeModal] = useState(false);
+
+  const [validationModal, setValidationModal] = useState<{
+    title?: string;
+    message: string;
+  } | null>(null);
+
+  const showValidation = (message: string, title = "Validation") => {
+    setValidationModal({ title, message });
+  };
 
   const [title, setTitle] = useState(safeRecipe.title);
   const [typeKey, setTypeKey] = useState(safeRecipe.typeKey);
@@ -82,10 +92,11 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
 
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
     if (!permission.granted) {
-      Alert.alert(
-        "Permission required",
+      showValidation(
         "Please allow access to your photo library.",
+        "Permission required",
       );
       return;
     }
@@ -140,22 +151,22 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     const cleanSteps = steps.map((x) => x.trim()).filter(Boolean);
 
     if (!cleanTitle) {
-      Alert.alert("Validation", "Title cannot be empty.");
+      showValidation("Title cannot be empty.");
       return;
     }
 
     if (!typeKey) {
-      Alert.alert("Validation", "Please select a recipe type.");
+      showValidation("Please select a recipe type.");
       return;
     }
 
     if (cleanIngredients.length === 0) {
-      Alert.alert("Validation", "Please add at least 1 ingredient.");
+      showValidation("Please add at least 1 ingredient.");
       return;
     }
 
     if (cleanSteps.length === 0) {
-      Alert.alert("Validation", "Please add at least 1 step.");
+      showValidation("Please add at least 1 step.");
       return;
     }
 
@@ -268,16 +279,17 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
 
           <Text style={styles.label}>Recipe Type</Text>
           {editMode ? (
-            <View style={styles.pickerWrapper}>
-              <Picker
-                selectedValue={typeKey}
-                onValueChange={(v) => setTypeKey(v)}
+            <>
+              <Pressable
+                style={styles.selectBox}
+                onPress={() => setShowTypeModal(true)}
               >
-                {recipeTypes.map((t) => (
-                  <Picker.Item key={t.id} label={t.label} value={t.key} />
-                ))}
-              </Picker>
-            </View>
+                <Text style={styles.selectText}>
+                  {typeLabelMap[typeKey] ?? "Select type"}
+                </Text>
+                <Text style={styles.selectArrow}>▼</Text>
+              </Pressable>
+            </>
           ) : (
             <Text style={styles.readText}>
               {typeLabelMap[recipe?.typeKey ?? ""] ?? recipe?.typeKey}
@@ -393,6 +405,33 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         <View style={{ height: 24 }} />
       </KeyboardAwareScrollView>
 
+      {/* ✅ Recipe Type Bottom Sheet */}
+      <BottomSheetModal
+        visible={showTypeModal}
+        title="Select Recipe Type"
+        onClose={() => setShowTypeModal(false)}
+      >
+        {recipeTypes.map((t) => {
+          const active = t.key === typeKey;
+
+          return (
+            <Pressable
+              key={t.id}
+              style={[styles.typeItem, active && styles.typeItemActive]}
+              onPress={() => {
+                setTypeKey(t.key);
+                setShowTypeModal(false);
+              }}
+            >
+              <Text style={[styles.typeText, active && styles.typeTextActive]}>
+                {t.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </BottomSheetModal>
+
+      {/* ✅ Delete confirmation modal */}
       <ActionModal
         visible={showDeleteModal}
         title="Delete Recipe"
@@ -402,6 +441,15 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         rightVariant="danger"
         onLeftPress={() => setShowDeleteModal(false)}
         onRightPress={confirmDelete}
+      />
+
+      {/* ✅ Validation modal */}
+      <ActionModal
+        visible={!!validationModal}
+        title={validationModal?.title ?? "Validation"}
+        message={validationModal?.message ?? ""}
+        leftText="OK"
+        onLeftPress={() => setValidationModal(null)}
       />
     </View>
   );
@@ -453,20 +501,34 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  pickerWrapper: {
-    borderWidth: 1,
-    borderColor: "#e6e6e6",
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    overflow: "hidden",
-    marginBottom: 14,
-  },
-
   readText: {
     fontSize: 15,
     fontWeight: "700",
     marginBottom: 14,
     color: "#111",
+  },
+
+  // ✅ bottom-sheet select trigger
+  selectBox: {
+    borderWidth: 1,
+    borderColor: "#e6e6e6",
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+  selectText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111",
+  },
+  selectArrow: {
+    fontSize: 12,
+    color: "#666",
   },
 
   section: {
@@ -548,4 +610,23 @@ const styles = StyleSheet.create({
   },
   notFoundTitle: { fontSize: 18, fontWeight: "900" },
   notFoundDesc: { fontSize: 13, color: "#666", textAlign: "center" },
+
+  // bottom sheet list styles
+  typeItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: "#f7f7f7",
+    marginBottom: 10,
+  },
+  typeItemActive: {
+    backgroundColor: "#111",
+  },
+  typeText: {
+    fontWeight: "800",
+    color: "#111",
+  },
+  typeTextActive: {
+    color: "#fff",
+  },
 });

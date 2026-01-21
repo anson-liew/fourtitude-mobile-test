@@ -11,23 +11,28 @@ type Props = {
   visible: boolean;
   title?: string;
   message?: string;
+
   leftText?: string;
+  onLeftPress: () => void;
+
+  // ✅ optional: if not provided => single button mode
   rightText?: string;
   rightVariant?: "primary" | "danger";
-  onLeftPress: () => void;
-  onRightPress: () => void;
+  onRightPress?: () => void;
 };
 
 export default function ActionModal({
   visible,
   title = "Title",
   message = "",
-  leftText = "Cancel",
-  rightText = "Confirm",
+  leftText = "OK",
+  rightText,
   rightVariant = "primary",
   onLeftPress,
   onRightPress,
 }: Props) {
+  const showRight = !!rightText;
+
   return (
     <Modal
       visible={visible}
@@ -46,22 +51,24 @@ export default function ActionModal({
               <Text style={styles.leftText}>{leftText}</Text>
             </Pressable>
 
-            <Pressable
-              style={[
-                styles.rightBtn,
-                rightVariant === "danger" && styles.rightBtnDanger,
-              ]}
-              onPress={onRightPress}
-            >
-              <Text
+            {showRight && (
+              <Pressable
                 style={[
-                  styles.rightText,
-                  rightVariant === "danger" && styles.rightTextDanger,
+                  styles.rightBtn,
+                  rightVariant === "danger" && styles.rightBtnDanger,
                 ]}
+                onPress={onRightPress}
               >
-                {rightText}
-              </Text>
-            </Pressable>
+                <Text
+                  style={[
+                    styles.rightText,
+                    rightVariant === "danger" && styles.rightTextDanger,
+                  ]}
+                >
+                  {rightText}
+                </Text>
+              </Pressable>
+            )}
           </View>
         </View>
       </View>

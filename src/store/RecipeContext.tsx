@@ -2,113 +2,7 @@ import React, { createContext, useEffect, useMemo, useState } from "react";
 import { Recipe } from "../types/recipe";
 import { RecipeStorage } from "../services/RecipeStorage";
 import * as Crypto from "expo-crypto";
-
-const SAMPLE_RECIPES: Recipe[] = [
-  {
-    id: "1",
-    title: "Bak Kut Teh",
-    typeKey: "CHINESE",
-    imageKey: "bkt",
-    imageUri: undefined,
-    ingredients: [
-      "Pork ribs",
-      "Garlic",
-      "White pepper",
-      "Soy sauce",
-      "Chinese herbs (optional)",
-    ],
-    steps: [
-      "Blanch pork ribs to remove impurities",
-      "Add water, garlic, pepper and herbs into a pot",
-      "Simmer for 45–60 minutes until tender",
-      "Season with soy sauce and serve hot",
-    ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    title: "Nasi Lemak",
-    typeKey: "MALAY",
-    imageKey: "nasiLemak",
-    imageUri: undefined,
-    ingredients: [
-      "Rice",
-      "Coconut milk",
-      "Pandan leaves",
-      "Sambal",
-      "Egg",
-      "Anchovies",
-    ],
-    steps: [
-      "Wash rice and cook with coconut milk and pandan leaves",
-      "Prepare sambal (or use ready-made sambal)",
-      "Serve rice with sambal, egg and anchovies",
-    ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "3",
-    title: "Roti Canai",
-    typeKey: "INDIAN",
-    imageKey: "rotiCanoi",
-    imageUri: undefined,
-    ingredients: ["Flour", "Water", "Salt", "Oil / ghee", "Egg (optional)"],
-    steps: [
-      "Mix flour, water, salt and oil to form dough",
-      "Rest the dough for at least 2 hours",
-      "Stretch and fold dough into layers",
-      "Pan-fry until golden and crispy",
-    ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "4",
-    title: "Chicken Chop",
-    typeKey: "WESTERN",
-    imageKey: "chickenChop",
-    imageUri: undefined,
-    ingredients: [
-      "Chicken thigh / breast",
-      "Salt & pepper",
-      "Flour",
-      "Butter",
-      "Black pepper sauce",
-    ],
-    steps: [
-      "Season chicken with salt & pepper",
-      "Coat chicken lightly with flour",
-      "Pan-fry until cooked through and golden",
-      "Serve with black pepper sauce",
-    ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "5",
-    title: "Curry Rice",
-    typeKey: "JAPANESE",
-    imageKey: "curryRice",
-    imageUri: undefined,
-    ingredients: [
-      "Japanese curry roux",
-      "Onion",
-      "Potato",
-      "Carrot",
-      "Chicken (optional)",
-    ],
-    steps: [
-      "Saute onion until fragrant",
-      "Add vegetables (and chicken if using) and cook",
-      "Add water and simmer until soft",
-      "Add curry roux and stir until thick, serve with rice",
-    ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+import { MOCK_DATA } from "../assets/data/recipeMock";
 
 type AddRecipeInput = {
   title: string;
@@ -162,8 +56,8 @@ export function RecipeProvider({ children }: { children: React.ReactNode }) {
     const stored = await RecipeStorage.load();
 
     if (!stored || stored.length === 0) {
-      setRecipes(SAMPLE_RECIPES);
-      await RecipeStorage.save(SAMPLE_RECIPES);
+      setRecipes(MOCK_DATA);
+      await RecipeStorage.save(MOCK_DATA);
       setIsLoading(false);
       return;
     }

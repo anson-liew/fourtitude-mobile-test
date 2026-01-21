@@ -1,24 +1,24 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  Alert,
   Image,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { Picker } from "@react-native-picker/picker";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+
 import { RootStackParamList } from "../navigation/RootNavigator";
 import recipeTypesData from "../assets/data/recipetypes.json";
 import { RecipeType } from "../types/recipe";
 import { useRecipes } from "../store/useRecipes";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useToast } from "../store/useToast";
 import { useLoading } from "../store/useLoading";
+import ActionModal from "../components/ActionModal";
+import BottomSheetModal from "../components/BottomSheetModal";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -26,7 +26,6 @@ type Props = NativeStackScreenProps<RootStackParamList, "AddRecipe">;
 
 export default function AddRecipeScreen({ navigation }: Props) {
   const { addRecipe, setSelectedTypeKey } = useRecipes();
-
   const toast = useToast();
   const loading = useLoading();
 
@@ -36,19 +35,36 @@ export default function AddRecipeScreen({ navigation }: Props) {
     return recipeTypes?.[0]?.key ?? "";
   }, [recipeTypes]);
 
+  const typeLabelMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    recipeTypes.forEach((t) => (map[t.key] = t.label));
+    return map;
+  }, [recipeTypes]);
+
   const [title, setTitle] = useState("");
   const [typeKey, setTypeKey] = useState(defaultTypeKey);
   const [imageUri, setImageUri] = useState<string | undefined>(undefined);
-
   const [ingredients, setIngredients] = useState<string[]>([""]);
   const [steps, setSteps] = useState<string[]>([""]);
 
+  const [showTypeModal, setShowTypeModal] = useState(false);
+
+  const [validationModal, setValidationModal] = useState<{
+    title?: string;
+    message: string;
+  } | null>(null);
+
+  const showValidation = (message: string, title = "Validation") => {
+    setValidationModal({ title, message });
+  };
+
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
     if (!permission.granted) {
-      Alert.alert(
-        "Permission required",
+      showValidation(
         "Please allow access to your photo library.",
+        "Permission required",
       );
       return;
     }
@@ -94,22 +110,22 @@ export default function AddRecipeScreen({ navigation }: Props) {
     const cleanSteps = steps.map((x) => x.trim()).filter(Boolean);
 
     if (!cleanTitle) {
-      Alert.alert("Validation", "Please enter a recipe title.");
+      showValidation("Please enter a recipe title.");
       return;
     }
 
     if (!typeKey) {
-      Alert.alert("Validation", "Please select a recipe type.");
+      showValidation("Please select a recipe type.");
       return;
     }
 
     if (cleanIngredients.length === 0) {
-      Alert.alert("Validation", "Please add at least 1 ingredient.");
+      showValidation("Please add at least 1 ingredient.");
       return;
     }
 
     if (cleanSteps.length === 0) {
-      Alert.alert("Validation", "Please add at least 1 step.");
+      showValidation("Please add at least 1 step.");
       return;
     }
 
@@ -124,6 +140,7 @@ export default function AddRecipeScreen({ navigation }: Props) {
         steps: cleanSteps,
       });
 
+      // reset filter to show new recipe
       setSelectedTypeKey("");
 
       await sleep(1200);
@@ -142,115 +159,150 @@ export default function AddRecipeScreen({ navigation }: Props) {
   };
 
   return (
-    <KeyboardAwareScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      enableOnAndroid
-      enableAutomaticScroll
-      extraScrollHeight={20}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Title */}
-      <Text style={styles.label}>Title</Text>
-      <TextInput
-        value={title}
-        onChangeText={setTitle}
-        placeholder="E.g. Chicken Curry"
-        style={styles.input}
-        textAlignVertical="top"
+    <View style={{ flex: 1 }}>
+      <KeyboardAwareScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        enableOnAndroid
+        enableAutomaticScroll
+        extraScrollHeight={20}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.label}>Title</Text>
+        <TextInput
+          value={title}
+          onChangeText={setTitle}
+          placeholder="E.g. Chicken Curry"
+          style={styles.input}
+          textAlignVertical="top"
+        />
+
+        <Text style={styles.label}>Recipe Type</Text>
+
+        {/* ✅ Bottom Sheet Picker Trigger */}
+        <Pressable
+          style={styles.selectBox}
+          onPress={() => setShowTypeModal(true)}
+        >
+          <Text style={styles.selectText}>
+            {typeLabelMap[typeKey] ?? "Select type"}
+          </Text>
+          <Text style={styles.selectArrow}>▼</Text>
+        </Pressable>
+
+        <Text style={styles.label}>Picture</Text>
+        <Pressable style={styles.imageBtn} onPress={pickImage}>
+          <Text style={styles.imageBtnText}>
+            {imageUri ? "Change Image" : "Pick Image"}
+          </Text>
+        </Pressable>
+
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={styles.previewImage} />
+        ) : (
+          <Text style={styles.helperText}>No image selected (optional)</Text>
+        )}
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.label}>Ingredients</Text>
+          <Pressable style={styles.smallBtn} onPress={addIngredientRow}>
+            <Text style={styles.smallBtnText}>+ Add</Text>
+          </Pressable>
+        </View>
+
+        {ingredients.map((ing, idx) => (
+          <View key={`ing-${idx}`} style={styles.row}>
+            <TextInput
+              value={ing}
+              onChangeText={(v) => updateIngredient(idx, v)}
+              placeholder={`Ingredient ${idx + 1}`}
+              style={[styles.input, styles.rowInput]}
+              textAlignVertical="top"
+            />
+
+            {ingredients.length > 1 && (
+              <Pressable
+                style={styles.deleteBtn}
+                onPress={() => removeIngredientRow(idx)}
+              >
+                <Text style={styles.deleteBtnText}>✕</Text>
+              </Pressable>
+            )}
+          </View>
+        ))}
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.label}>Steps</Text>
+          <Pressable style={styles.smallBtn} onPress={addStepRow}>
+            <Text style={styles.smallBtnText}>+ Add</Text>
+          </Pressable>
+        </View>
+
+        {steps.map((step, idx) => (
+          <View key={`step-${idx}`} style={styles.row}>
+            <TextInput
+              value={step}
+              onChangeText={(v) => updateStep(idx, v)}
+              placeholder={`Step ${idx + 1}`}
+              style={[styles.input, styles.rowInput]}
+              multiline
+              textAlignVertical="top"
+            />
+
+            {steps.length > 1 && (
+              <Pressable
+                style={styles.deleteBtn}
+                onPress={() => removeStepRow(idx)}
+              >
+                <Text style={styles.deleteBtnText}>✕</Text>
+              </Pressable>
+            )}
+          </View>
+        ))}
+
+        <Pressable style={styles.saveBtn} onPress={onSave}>
+          <Text style={styles.saveBtnText}>Save Recipe</Text>
+        </Pressable>
+
+        <View style={{ height: 24 }} />
+      </KeyboardAwareScrollView>
+
+      {/* ✅ Recipe Type Bottom Sheet */}
+      <BottomSheetModal
+        visible={showTypeModal}
+        title="Select Recipe Type"
+        onClose={() => setShowTypeModal(false)}
+      >
+        {recipeTypes.map((t) => {
+          const active = t.key === typeKey;
+
+          return (
+            <Pressable
+              key={t.id}
+              style={[styles.typeItem, active && styles.typeItemActive]}
+              onPress={() => {
+                setTypeKey(t.key);
+                setShowTypeModal(false);
+              }}
+            >
+              <Text style={[styles.typeText, active && styles.typeTextActive]}>
+                {t.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </BottomSheetModal>
+
+      {/* ✅ Validation modal */}
+      <ActionModal
+        visible={!!validationModal}
+        title={validationModal?.title ?? "Validation"}
+        message={validationModal?.message ?? ""}
+        leftText="OK"
+        onLeftPress={() => setValidationModal(null)}
       />
-
-      {/* Type Picker */}
-      <Text style={styles.label}>Recipe Type</Text>
-      <View style={styles.pickerWrapper}>
-        <Picker selectedValue={typeKey} onValueChange={(v) => setTypeKey(v)}>
-          {recipeTypes.map((t) => (
-            <Picker.Item key={t.id} label={t.label} value={t.key} />
-          ))}
-        </Picker>
-      </View>
-
-      {/* Image */}
-      <Text style={styles.label}>Picture</Text>
-      <Pressable style={styles.imageBtn} onPress={pickImage}>
-        <Text style={styles.imageBtnText}>
-          {imageUri ? "Change Image" : "Pick Image"}
-        </Text>
-      </Pressable>
-
-      {imageUri ? (
-        <Image source={{ uri: imageUri }} style={styles.previewImage} />
-      ) : (
-        <Text style={styles.helperText}>No image selected (optional)</Text>
-      )}
-
-      {/* Ingredients */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Ingredients</Text>
-        <Pressable style={styles.smallBtn} onPress={addIngredientRow}>
-          <Text style={styles.smallBtnText}>+ Add</Text>
-        </Pressable>
-      </View>
-
-      {ingredients.map((ing, idx) => (
-        <View key={`ing-${idx}`} style={styles.row}>
-          <TextInput
-            value={ing}
-            onChangeText={(v) => updateIngredient(idx, v)}
-            placeholder={`Ingredient ${idx + 1}`}
-            style={[styles.input, styles.rowInput]}
-            textAlignVertical="top"
-          />
-
-          {ingredients.length > 1 && (
-            <Pressable
-              style={styles.deleteBtn}
-              onPress={() => removeIngredientRow(idx)}
-            >
-              <Text style={styles.deleteBtnText}>✕</Text>
-            </Pressable>
-          )}
-        </View>
-      ))}
-
-      {/* Steps */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Steps</Text>
-        <Pressable style={styles.smallBtn} onPress={addStepRow}>
-          <Text style={styles.smallBtnText}>+ Add</Text>
-        </Pressable>
-      </View>
-
-      {steps.map((step, idx) => (
-        <View key={`step-${idx}`} style={styles.row}>
-          <TextInput
-            value={step}
-            onChangeText={(v) => updateStep(idx, v)}
-            placeholder={`Step ${idx + 1}`}
-            style={[styles.input, styles.rowInput]}
-            multiline
-            textAlignVertical="top"
-          />
-
-          {steps.length > 1 && (
-            <Pressable
-              style={styles.deleteBtn}
-              onPress={() => removeStepRow(idx)}
-            >
-              <Text style={styles.deleteBtnText}>✕</Text>
-            </Pressable>
-          )}
-        </View>
-      ))}
-
-      {/* Save */}
-      <Pressable style={styles.saveBtn} onPress={onSave}>
-        <Text style={styles.saveBtnText}>Save Recipe</Text>
-      </Pressable>
-
-      <View style={{ height: 24 }} />
-    </KeyboardAwareScrollView>
+    </View>
   );
 }
 
@@ -270,13 +322,27 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  pickerWrapper: {
+  // ✅ bottom-sheet select trigger
+  selectBox: {
     borderWidth: 1,
     borderColor: "#e6e6e6",
     borderRadius: 12,
     backgroundColor: "#fff",
-    overflow: "hidden",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 14,
+  },
+  selectText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111",
+  },
+  selectArrow: {
+    fontSize: 12,
+    color: "#666",
   },
 
   imageBtn: {
@@ -309,7 +375,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 8,
   },
-  sectionTitle: { fontSize: 15, fontWeight: "800" },
 
   smallBtn: {
     paddingHorizontal: 10,
@@ -341,4 +406,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   saveBtnText: { color: "#fff", fontWeight: "800", fontSize: 15 },
+
+  // bottom sheet list styles
+  typeItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: "#f7f7f7",
+    marginBottom: 10,
+  },
+  typeItemActive: {
+    backgroundColor: "#111",
+  },
+  typeText: {
+    fontWeight: "800",
+    color: "#111",
+  },
+  typeTextActive: {
+    color: "#fff",
+  },
 });
