@@ -11,11 +11,8 @@ type Props = {
   visible: boolean;
   title?: string;
   message?: string;
-
   leftText?: string;
   onLeftPress: () => void;
-
-  // ✅ optional: if not provided => single button mode
   rightText?: string;
   rightVariant?: "primary" | "danger";
   onRightPress?: () => void;

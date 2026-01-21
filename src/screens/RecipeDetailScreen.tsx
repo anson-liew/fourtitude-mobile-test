@@ -405,7 +405,6 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         <View style={{ height: 24 }} />
       </KeyboardAwareScrollView>
 
-      {/* ✅ Recipe Type Bottom Sheet */}
       <BottomSheetModal
         visible={showTypeModal}
         title="Select Recipe Type"
@@ -431,19 +430,17 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         })}
       </BottomSheetModal>
 
-      {/* ✅ Delete confirmation modal */}
       <ActionModal
         visible={showDeleteModal}
         title="Delete Recipe"
         message="Are you sure you want to delete this recipe?"
         leftText="Cancel"
-        rightText="Delete"
+        rightText="Confirm"
         rightVariant="danger"
         onLeftPress={() => setShowDeleteModal(false)}
         onRightPress={confirmDelete}
       />
 
-      {/* ✅ Validation modal */}
       <ActionModal
         visible={!!validationModal}
         title={validationModal?.title ?? "Validation"}
@@ -508,7 +505,6 @@ const styles = StyleSheet.create({
     color: "#111",
   },
 
-  // ✅ bottom-sheet select trigger
   selectBox: {
     borderWidth: 1,
     borderColor: "#e6e6e6",
@@ -611,7 +607,6 @@ const styles = StyleSheet.create({
   notFoundTitle: { fontSize: 18, fontWeight: "900" },
   notFoundDesc: { fontSize: 13, color: "#666", textAlign: "center" },
 
-  // bottom sheet list styles
   typeItem: {
     paddingVertical: 12,
     paddingHorizontal: 12,

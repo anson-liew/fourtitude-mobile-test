@@ -140,7 +140,6 @@ export default function AddRecipeScreen({ navigation }: Props) {
         steps: cleanSteps,
       });
 
-      // reset filter to show new recipe
       setSelectedTypeKey("");
 
       await sleep(1200);
@@ -180,7 +179,6 @@ export default function AddRecipeScreen({ navigation }: Props) {
 
         <Text style={styles.label}>Recipe Type</Text>
 
-        {/* ✅ Bottom Sheet Picker Trigger */}
         <Pressable
           style={styles.selectBox}
           onPress={() => setShowTypeModal(true)}
@@ -268,7 +266,6 @@ export default function AddRecipeScreen({ navigation }: Props) {
         <View style={{ height: 24 }} />
       </KeyboardAwareScrollView>
 
-      {/* ✅ Recipe Type Bottom Sheet */}
       <BottomSheetModal
         visible={showTypeModal}
         title="Select Recipe Type"
@@ -294,7 +291,6 @@ export default function AddRecipeScreen({ navigation }: Props) {
         })}
       </BottomSheetModal>
 
-      {/* ✅ Validation modal */}
       <ActionModal
         visible={!!validationModal}
         title={validationModal?.title ?? "Validation"}
@@ -322,7 +318,6 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  // ✅ bottom-sheet select trigger
   selectBox: {
     borderWidth: 1,
     borderColor: "#e6e6e6",
@@ -407,7 +402,6 @@ const styles = StyleSheet.create({
   },
   saveBtnText: { color: "#fff", fontWeight: "800", fontSize: 15 },
 
-  // bottom sheet list styles
   typeItem: {
     paddingVertical: 12,
     paddingHorizontal: 12,
