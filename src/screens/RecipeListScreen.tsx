@@ -66,7 +66,6 @@ export default function RecipeListScreen({ navigation, route }: Props) {
     openedIdRef.current = null;
   };
 
-  // ✅ delete confirm state
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -155,10 +154,9 @@ export default function RecipeListScreen({ navigation, route }: Props) {
           renderItem={({ item }) => (
             <Swipeable
               overshootRight={false}
-              friction={1.6} // ✅ smoother swipe
-              rightThreshold={40} // ✅ easier to keep opened
+              friction={1.6}
+              rightThreshold={40}
               onSwipeableWillOpen={() => {
-                // ✅ only allow one open at a time
                 if (openedIdRef.current && openedIdRef.current !== item.id) {
                   const prevRef = swipeRefs.current.get(openedIdRef.current);
                   prevRef?.close();
@@ -194,7 +192,6 @@ export default function RecipeListScreen({ navigation, route }: Props) {
                 recipe={item}
                 typeLabel={typeLabelMap[item.typeKey] ?? item.typeKey}
                 onPress={() => {
-                  // ✅ tap card should close opened swipe (optional)
                   closeOpenedSwipe();
                   navigation.navigate("RecipeDetail", { recipeId: item.id });
                 }}
@@ -204,7 +201,6 @@ export default function RecipeListScreen({ navigation, route }: Props) {
         />
       )}
 
-      {/* ✅ Filter BottomSheet */}
       <BottomSheetModal
         visible={showTypeModal}
         title="Filter by Recipe Type"
@@ -244,7 +240,6 @@ export default function RecipeListScreen({ navigation, route }: Props) {
         })}
       </BottomSheetModal>
 
-      {/* ✅ Delete confirm modal */}
       <ActionModal
         visible={showDeleteModal}
         title="Delete Recipe"
@@ -256,7 +251,6 @@ export default function RecipeListScreen({ navigation, route }: Props) {
         onRightPress={confirmDelete}
       />
 
-      {/* ✅ Toast */}
       <ToastMessage
         visible={!!toast}
         type={toast?.type}
@@ -357,13 +351,12 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
 
-  // ✅ swipe right action
   rightActions: {
     justifyContent: "center",
-    marginBottom: 12, // same as RecipeCard marginBottom
+    marginBottom: 12,
   },
   deleteGap: {
-    paddingLeft: 10, // gap between card & delete button
+    paddingLeft: 10,
   },
   swipeDelete: {
     height: "100%",
