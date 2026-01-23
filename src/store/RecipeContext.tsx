@@ -41,12 +41,7 @@ export function RecipeProvider({ children }: { children: React.ReactNode }) {
   const [selectedTypeKey, setSelectedTypeKey] = useState<string>("");
 
   useEffect(() => {
-    const init = async () => {
-      await RecipeStorage.clear();
-      await reload();
-    };
-
-    init();
+    reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

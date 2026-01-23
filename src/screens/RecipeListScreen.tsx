@@ -43,7 +43,7 @@ export default function RecipeListScreen({ navigation, route }: Props) {
   }, [recipeTypes]);
 
   const selectedTypeLabel = useMemo(() => {
-    if (!selectedTypeKey) return "All Types";
+    if (!selectedTypeKey) return "All";
     return typeLabelMap[selectedTypeKey] ?? selectedTypeKey;
   }, [selectedTypeKey, typeLabelMap]);
 
@@ -203,7 +203,7 @@ export default function RecipeListScreen({ navigation, route }: Props) {
 
       <BottomSheetModal
         visible={showTypeModal}
-        title="Filter by Recipe Type"
+        title="Recipe Type List"
         onClose={() => setShowTypeModal(false)}
       >
         <Pressable
@@ -216,7 +216,7 @@ export default function RecipeListScreen({ navigation, route }: Props) {
           <Text
             style={[styles.typeText, !selectedTypeKey && styles.typeTextActive]}
           >
-            All Types
+            All
           </Text>
         </Pressable>
 
