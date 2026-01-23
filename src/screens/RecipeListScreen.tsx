@@ -28,13 +28,10 @@ import {
   RecipeTypeService,
   RecipeTypeItem,
 } from "../services/RecipeTypeService";
-import { useLoading } from "../store/useLoading";
 
 type Props = NativeStackScreenProps<RootStackParamList, "RecipeList">;
 
 export default function RecipeListScreen({ navigation, route }: Props) {
-  const loading = useLoading();
-
   const {
     isLoading,
     filteredRecipes,
@@ -112,27 +109,23 @@ export default function RecipeListScreen({ navigation, route }: Props) {
   const onCancelDelete = () => {
     setShowDeleteModal(false);
     closeOpenedSwipe();
-    setDeleteId(null);
   };
 
   const confirmDelete = async () => {
+    closeOpenedSwipe();
+
     if (!deleteId) return;
 
     setShowDeleteModal(false);
 
     try {
-      loading.show();
-
       await deleteRecipe(deleteId);
-
       setToast({ type: "success", message: "Recipe deleted successfully!" });
     } catch (err) {
       console.log(err);
       setToast({ type: "error", message: "Failed to delete recipe." });
     } finally {
-      closeOpenedSwipe();
       setDeleteId(null);
-      loading.hide();
     }
   };
 
@@ -150,10 +143,7 @@ export default function RecipeListScreen({ navigation, route }: Props) {
       headerRight: () => (
         <Pressable
           style={styles.headerBtn}
-          onPress={() => {
-            closeOpenedSwipe();
-            navigation.navigate("AddRecipe");
-          }}
+          onPress={() => navigation.navigate("AddRecipe")}
         >
           <Text style={styles.headerBtnText}>+ Add</Text>
         </Pressable>
@@ -193,7 +183,6 @@ export default function RecipeListScreen({ navigation, route }: Props) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          onScrollBeginDrag={closeOpenedSwipe}
           renderItem={({ item }) => (
             <Swipeable
               overshootRight={false}

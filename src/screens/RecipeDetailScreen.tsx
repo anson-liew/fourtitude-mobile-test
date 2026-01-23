@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   Image,
   InteractionManager,
   Pressable,
@@ -14,13 +15,16 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view
 
 import { RootStackParamList } from "../navigation/RootNavigator";
 import recipeTypesData from "../assets/data/recipetypes.json";
-import { RecipeType } from "../types/recipe";
 import { useRecipes } from "../store/useRecipes";
 import { recipeImages, RecipeImageKey } from "../assets/recipeImages";
 import ActionModal from "../components/ActionModal";
 import BottomSheetModal from "../components/BottomSheetModal";
 import { useLoading } from "../store/useLoading";
 import { useToast } from "../store/useToast";
+import {
+  RecipeTypeService,
+  RecipeTypeItem,
+} from "../services/RecipeTypeService";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -34,7 +38,26 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
 
   const { getRecipeById, updateRecipe, deleteRecipe } = useRecipes();
 
-  const recipeTypes = recipeTypesData as RecipeType[];
+  const localRecipeTypes = recipeTypesData as RecipeTypeItem[];
+  const [recipeTypes, setRecipeTypes] =
+    useState<RecipeTypeItem[]>(localRecipeTypes);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const remote = await RecipeTypeService.fetchRemote();
+        if (cancelled) return;
+        if (remote.length > 0) setRecipeTypes(remote);
+      } catch (err) {}
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const typeLabelMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -83,6 +106,27 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
   const [steps, setSteps] = useState<string[]>(
     safeRecipe.steps.length ? safeRecipe.steps : [""],
   );
+
+  useEffect(() => {
+    if (!recipe) return;
+
+    setTitle(recipe.title);
+    setTypeKey(recipe.typeKey);
+    setImageUri(recipe.imageUri);
+    setIngredients(recipe.ingredients.length ? recipe.ingredients : [""]);
+    setSteps(recipe.steps.length ? recipe.steps : [""]);
+  }, [recipe?.id]);
+
+  useEffect(() => {
+    if (!recipeTypes?.length) return;
+
+    const exists = recipeTypes.some((t) => t.key === typeKey);
+    if (typeKey && exists) return;
+
+    if (!typeKey) {
+      setTypeKey(recipeTypes[0]?.key ?? "");
+    }
+  }, [recipeTypes]);
 
   const imageSource = useMemo(() => {
     if (imageUri) return { uri: imageUri };
@@ -136,10 +180,8 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     setTitle(recipe.title);
     setTypeKey(recipe.typeKey);
     setImageUri(recipe.imageUri);
-
     setIngredients(recipe.ingredients.length ? recipe.ingredients : [""]);
     setSteps(recipe.steps.length ? recipe.steps : [""]);
-
     setEditMode(false);
   };
 
@@ -279,17 +321,15 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
 
           <Text style={styles.label}>Recipe Type</Text>
           {editMode ? (
-            <>
-              <Pressable
-                style={styles.selectBox}
-                onPress={() => setShowTypeModal(true)}
-              >
-                <Text style={styles.selectText}>
-                  {typeLabelMap[typeKey] ?? "Select type"}
-                </Text>
-                <Text style={styles.selectArrow}>▼</Text>
-              </Pressable>
-            </>
+            <Pressable
+              style={styles.selectBox}
+              onPress={() => setShowTypeModal(true)}
+            >
+              <Text style={styles.selectText}>
+                {typeLabelMap[typeKey] ?? "Select type"}
+              </Text>
+              <Text style={styles.selectArrow}>▼</Text>
+            </Pressable>
           ) : (
             <Text style={styles.readText}>
               {typeLabelMap[recipe?.typeKey ?? ""] ?? recipe?.typeKey}
