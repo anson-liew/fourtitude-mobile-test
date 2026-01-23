@@ -1,4 +1,10 @@
-import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -11,19 +17,24 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useFocusEffect } from "@react-navigation/native";
 import { Swipeable } from "react-native-gesture-handler";
 import { Feather } from "@expo/vector-icons";
-
 import { RootStackParamList } from "../navigation/RootNavigator";
 import recipeTypesData from "../assets/data/recipetypes.json";
 import RecipeCard from "../components/RecipeCard";
-import { RecipeType } from "../types/recipe";
-import { useRecipes } from "../store/useRecipes";
 import ToastMessage from "../components/ToastMessage";
 import BottomSheetModal from "../components/BottomSheetModal";
 import ActionModal from "../components/ActionModal";
+import { useRecipes } from "../store/useRecipes";
+import {
+  RecipeTypeService,
+  RecipeTypeItem,
+} from "../services/RecipeTypeService";
+import { useLoading } from "../store/useLoading";
 
 type Props = NativeStackScreenProps<RootStackParamList, "RecipeList">;
 
 export default function RecipeListScreen({ navigation, route }: Props) {
+  const loading = useLoading();
+
   const {
     isLoading,
     filteredRecipes,
@@ -32,7 +43,31 @@ export default function RecipeListScreen({ navigation, route }: Props) {
     deleteRecipe,
   } = useRecipes();
 
-  const recipeTypes = recipeTypesData as RecipeType[];
+  const localRecipeTypes = recipeTypesData as RecipeTypeItem[];
+  const [recipeTypes, setRecipeTypes] =
+    useState<RecipeTypeItem[]>(localRecipeTypes);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const remote = await RecipeTypeService.fetchRemote();
+        if (cancelled) return;
+
+        if (remote.length > 0) {
+          setRecipeTypes(remote);
+        }
+      } catch (err) {
+        console.log("remote types failed, fallback local", err);
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const typeLabelMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -77,23 +112,27 @@ export default function RecipeListScreen({ navigation, route }: Props) {
   const onCancelDelete = () => {
     setShowDeleteModal(false);
     closeOpenedSwipe();
+    setDeleteId(null);
   };
 
   const confirmDelete = async () => {
-    closeOpenedSwipe();
-
     if (!deleteId) return;
 
     setShowDeleteModal(false);
 
     try {
+      loading.show();
+
       await deleteRecipe(deleteId);
+
       setToast({ type: "success", message: "Recipe deleted successfully!" });
     } catch (err) {
       console.log(err);
       setToast({ type: "error", message: "Failed to delete recipe." });
     } finally {
+      closeOpenedSwipe();
       setDeleteId(null);
+      loading.hide();
     }
   };
 
@@ -111,7 +150,10 @@ export default function RecipeListScreen({ navigation, route }: Props) {
       headerRight: () => (
         <Pressable
           style={styles.headerBtn}
-          onPress={() => navigation.navigate("AddRecipe")}
+          onPress={() => {
+            closeOpenedSwipe();
+            navigation.navigate("AddRecipe");
+          }}
         >
           <Text style={styles.headerBtnText}>+ Add</Text>
         </Pressable>
@@ -151,6 +193,7 @@ export default function RecipeListScreen({ navigation, route }: Props) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          onScrollBeginDrag={closeOpenedSwipe}
           renderItem={({ item }) => (
             <Swipeable
               overshootRight={false}

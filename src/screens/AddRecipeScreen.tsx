@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Image,
   Pressable,
@@ -10,15 +10,17 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-
 import { RootStackParamList } from "../navigation/RootNavigator";
 import recipeTypesData from "../assets/data/recipetypes.json";
-import { RecipeType } from "../types/recipe";
 import { useRecipes } from "../store/useRecipes";
 import { useToast } from "../store/useToast";
 import { useLoading } from "../store/useLoading";
 import ActionModal from "../components/ActionModal";
 import BottomSheetModal from "../components/BottomSheetModal";
+import {
+  RecipeTypeService,
+  RecipeTypeItem,
+} from "../services/RecipeTypeService";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -29,11 +31,9 @@ export default function AddRecipeScreen({ navigation }: Props) {
   const toast = useToast();
   const loading = useLoading();
 
-  const recipeTypes = recipeTypesData as RecipeType[];
-
-  const defaultTypeKey = useMemo(() => {
-    return recipeTypes?.[0]?.key ?? "";
-  }, [recipeTypes]);
+  const localRecipeTypes = recipeTypesData as RecipeTypeItem[];
+  const [recipeTypes, setRecipeTypes] =
+    useState<RecipeTypeItem[]>(localRecipeTypes);
 
   const typeLabelMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -42,7 +42,7 @@ export default function AddRecipeScreen({ navigation }: Props) {
   }, [recipeTypes]);
 
   const [title, setTitle] = useState("");
-  const [typeKey, setTypeKey] = useState(defaultTypeKey);
+  const [typeKey, setTypeKey] = useState<string>("");
   const [imageUri, setImageUri] = useState<string | undefined>(undefined);
   const [ingredients, setIngredients] = useState<string[]>([""]);
   const [steps, setSteps] = useState<string[]>([""]);
@@ -57,6 +57,41 @@ export default function AddRecipeScreen({ navigation }: Props) {
   const showValidation = (message: string, title = "Validation") => {
     setValidationModal({ title, message });
   };
+
+  useEffect(() => {
+    if (!typeKey && recipeTypes.length > 0) {
+      setTypeKey(recipeTypes[0].key);
+    }
+  }, [recipeTypes, typeKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const remote = await RecipeTypeService.fetchRemote();
+
+        if (cancelled) return;
+
+        if (remote.length > 0) {
+          setRecipeTypes(remote);
+
+          if (!typeKey) {
+            setTypeKey(remote[0].key);
+          }
+        }
+      } catch (err) {
+        console.log("remote types failed, fallback local", err);
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -84,9 +119,7 @@ export default function AddRecipeScreen({ navigation }: Props) {
     setIngredients((prev) => prev.map((x, i) => (i === index ? value : x)));
   };
 
-  const addIngredientRow = () => {
-    setIngredients((prev) => [...prev, ""]);
-  };
+  const addIngredientRow = () => setIngredients((prev) => [...prev, ""]);
 
   const removeIngredientRow = (index: number) => {
     setIngredients((prev) => prev.filter((_, i) => i !== index));
@@ -96,9 +129,7 @@ export default function AddRecipeScreen({ navigation }: Props) {
     setSteps((prev) => prev.map((x, i) => (i === index ? value : x)));
   };
 
-  const addStepRow = () => {
-    setSteps((prev) => [...prev, ""]);
-  };
+  const addStepRow = () => setSteps((prev) => [...prev, ""]);
 
   const removeStepRow = (index: number) => {
     setSteps((prev) => prev.filter((_, i) => i !== index));
@@ -142,7 +173,7 @@ export default function AddRecipeScreen({ navigation }: Props) {
 
       setSelectedTypeKey("");
 
-      await sleep(1200);
+      await sleep(800);
 
       navigation.goBack();
 

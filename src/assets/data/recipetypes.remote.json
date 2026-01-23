@@ -1,0 +1,8 @@
+[
+  { "id": "1", "key": "CHINESE", "label": "Chinese" },
+  { "id": "2", "key": "MALAY", "label": "Malay" },
+  { "id": "3", "key": "INDIAN", "label": "Indian" },
+  { "id": "4", "key": "WESTERN", "label": "Western" },
+  { "id": "5", "key": "JAPANESE", "label": "Japanese" },
+  { "id": "6", "key": "DESSERT", "label": "Dessert" }
+]
